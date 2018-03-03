@@ -10,7 +10,7 @@ using ILRuntime.Runtime.Intepreter;
 
 namespace ILRuntime.Runtime.Enviorment
 {
-    public class DelegateManager
+    public partial class DelegateManager
     {
         List<DelegateMapNode> methods = new List<DelegateMapNode>();
         List<DelegateMapNode> functions = new List<DelegateMapNode>();
@@ -125,7 +125,7 @@ namespace ILRuntime.Runtime.Enviorment
         internal Delegate ConvertToDelegate(Type clrDelegateType, IDelegateAdapter adapter)
         {
             Func<Delegate, Delegate> func;
-            if(adapter is DummyDelegateAdapter)
+            if (adapter is DummyDelegateAdapter)
             {
                 DelegateAdapter.ThrowAdapterNotFound(adapter.Method);
                 return null;
@@ -151,7 +151,7 @@ namespace ILRuntime.Runtime.Enviorment
                 sb.Append("((");
                 var mi = clrDelegateType.GetMethod("Invoke");
                 bool first = true;
-                foreach(var i in mi.GetParameters())
+                foreach (var i in mi.GetParameters())
                 {
                     if (first)
                     {
@@ -163,7 +163,7 @@ namespace ILRuntime.Runtime.Enviorment
                 }
                 sb.AppendLine(") =>");
                 sb.AppendLine("    {");
-                if(mi.ReturnType != appdomain.VoidType.TypeForCLR)
+                if (mi.ReturnType != appdomain.VoidType.TypeForCLR)
                 {
                     sb.Append("        return ((Func<");
                     first = true;
