@@ -71,16 +71,9 @@ namespace ILRuntime.Reflection
         {
             var methods = type.GetMethods();
             this.methods = new ILRuntimeMethodInfo[methods.Count];
-            for (int i = 0; i < methods.Count; i++)
+            for(int i = 0; i < methods.Count; i++)
             {
-                if (methods[i] is ILMethod)
-                {
-                    this.methods[i] = (ILRuntimeMethodInfo)((ILMethod)methods[i]).ReflectionMethodInfo;
-                }
-                else
-                {
-                    //                    this.methods[i] = ((CLRMethod)methods[i]).MethodInfo;
-                }
+                this.methods[i] = (ILRuntimeMethodInfo)((ILMethod)methods[i]).ReflectionMethodInfo;
             }
         }
 
@@ -183,7 +176,7 @@ namespace ILRuntime.Reflection
         {
             var ctors = type.GetConstructors();
             ConstructorInfo[] res = new ConstructorInfo[ctors.Count];
-            for (int i = 0; i < res.Length; i++)
+            for(int i = 0; i < res.Length; i++)
             {
                 res[i] = ctors[i].ReflectionConstructorInfo;
             }
@@ -203,7 +196,7 @@ namespace ILRuntime.Reflection
             if (customAttributes == null)
                 InitializeCustomAttribute();
             List<object> res = new List<object>();
-            for (int i = 0; i < customAttributes.Length; i++)
+            for(int i = 0; i < customAttributes.Length; i++)
             {
                 if (attributeTypes[i].Equals(attributeType))
                     res.Add(customAttributes[i]);
@@ -235,7 +228,7 @@ namespace ILRuntime.Reflection
         {
             if (fields == null)
                 InitializeFields();
-            foreach (var i in fields)
+            foreach(var i in fields)
             {
                 if (i.Name == name)
                     return i;
@@ -252,7 +245,7 @@ namespace ILRuntime.Reflection
             bool isStatic = (bindingAttr & BindingFlags.Static) == BindingFlags.Static;
             bool isInstance = (bindingAttr & BindingFlags.Instance) == BindingFlags.Instance;
             List<FieldInfo> res = new List<FieldInfo>();
-            foreach (var i in fields)
+            foreach(var i in fields)
             {
                 if (isPublic != i.IsPublic && isPrivate != !i.IsPublic)
                     continue;
@@ -437,7 +430,7 @@ namespace ILRuntime.Reflection
             if (properties == null)
                 InitializeProperties();
 
-            foreach (var i in properties)
+            foreach(var i in properties)
             {
                 if (i.Name == name)
                     return i;
