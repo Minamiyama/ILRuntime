@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using ILClass;
+using ILRuntimeTest.TestFramework;
 
 namespace ILClass
 {
@@ -21,6 +23,19 @@ namespace ILClass
     {
         public void MethodInClass() { }
     }
+
+    public class CrossBingdingTestClass : TestClass2
+    {
+        protected override void AbMethod1()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override float AbMethod2(int arg1)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }
 
 namespace TestCases
@@ -28,7 +43,7 @@ namespace TestCases
     class GetMethodTest
     {
 
-        public static void _______RunTest()
+        public static void RunTestPureClass()
         {
             var ilTest = new ILClass.TestClass();
             var nativeTest = new NativeClass.TestClass();
@@ -54,6 +69,15 @@ namespace TestCases
             found = typeof(ILClass.TestClass).GetMethod("MethodInBaseBase") != null;
             Console.WriteLine($"[ILClass]找到基类方法？{found}");
 
+            Console.WriteLine("***************测试结束*************");
+        }
+
+        public static void _________RunTestCrossBinding()
+        {
+            Console.WriteLine("***************测试开始*************");
+            Console.WriteLine("+++++++++++++++跨域类+++++++++++++++");
+            var methods = typeof(CrossBingdingTestClass).GetMethods();
+            PrintMethods(methods);
             Console.WriteLine("***************测试结束*************");
         }
 

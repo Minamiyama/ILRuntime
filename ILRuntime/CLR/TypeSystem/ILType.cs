@@ -13,7 +13,7 @@ namespace ILRuntime.CLR.TypeSystem
 {
     public class ILType : IType
     {
-        Dictionary<string, List<ILMethod>> methods;
+        Dictionary<string, List<IMethod>> methods;
         TypeReference typeRef;
         TypeDefinition definition;
         ILRuntime.Runtime.Enviorment.AppDomain appdomain;
@@ -602,7 +602,7 @@ namespace ILRuntime.CLR.TypeSystem
         {
             if (methods == null)
                 InitializeMethods();
-            List<ILMethod> lst;
+            List<IMethod> lst;
             if (methods.TryGetValue(name, out lst))
             {
                 return lst[0];
@@ -614,7 +614,7 @@ namespace ILRuntime.CLR.TypeSystem
         {
             if (methods == null)
                 InitializeMethods();
-            List<ILMethod> lst;
+            List<IMethod> lst;
             if (methods.TryGetValue(name, out lst))
             {
                 foreach (var i in lst)
@@ -645,7 +645,7 @@ namespace ILRuntime.CLR.TypeSystem
 
         void InitializeMethods()
         {
-            methods = new Dictionary<string, List<ILMethod>>();
+            methods = new Dictionary<string, List<IMethod>>();
             constructors = new List<ILMethod>();
             foreach (var i in definition.Methods)
             {
@@ -658,10 +658,10 @@ namespace ILRuntime.CLR.TypeSystem
                 }
                 else
                 {
-                    List<ILMethod> lst;
+                    List<IMethod> lst;
                     if (!methods.TryGetValue(i.Name, out lst))
                     {
-                        lst = new List<ILMethod>();
+                        lst = new List<IMethod>();
                         methods[i.Name] = lst;
                     }
                     var m = new ILMethod(i, this, appdomain);
@@ -672,20 +672,20 @@ namespace ILRuntime.CLR.TypeSystem
 
             if (BaseType != null)
             {
+                if (BaseType is CrossBindingAdaptor)
+                {
+                    Console.WriteLine($"[CrossBinding]{FullName} : {BaseType.FullName}");
+                }
                 var baseMethods = BaseType.GetMethods();
                 foreach (var baseMethod in baseMethods)
                 {
-                    List<ILMethod> lstBase;
+                    List<IMethod> lstBase;
                     if (!methods.TryGetValue(baseMethod.Name, out lstBase))
                     {
-                        lstBase = new List<ILMethod>();
+                        lstBase = new List<IMethod>();
                         methods[baseMethod.Name] = lstBase;
                     }
-
-                    if (baseMethod is ILMethod)
-                    {
-                        lstBase.Add((ILMethod)baseMethod);
-                    }
+                    lstBase.Add(baseMethod);
                 }
             }
 
@@ -735,52 +735,61 @@ namespace ILRuntime.CLR.TypeSystem
         {
             if (methods == null)
                 InitializeMethods();
-            List<ILMethod> lst;
+            List<IMethod> lst;
             IMethod genericMethod = null;
             if (methods.TryGetValue(name, out lst))
             {
                 for (var idx = 0; idx < lst.Count; idx++)
                 {
                     var i = lst[idx];
-                    int pCnt = param != null ? param.Count : 0;
-                    if (i.ParameterCount == pCnt)
+                    if (i is ILMethod)
                     {
-                        bool match = true;
-                        if (genericArguments != null && i.GenericParameterCount == genericArguments.Length && genericMethod == null)
+                        var ilMethod = i as ILMethod;
+                        int pCnt = param != null ? param.Count : 0;
+                        if (ilMethod.ParameterCount == pCnt)
                         {
-                            genericMethod = CheckGenericParams(i, param, ref match);
-                        }
-                        else
-                        {
-                            match = CheckGenericArguments(i, genericArguments);
-                            if (!match)
-                                continue;
-                            for (int j = 0; j < pCnt; j++)
+                            bool match = true;
+                            if (genericArguments != null && ilMethod.GenericParameterCount == genericArguments.Length && genericMethod == null)
                             {
-                                if (param[j] != i.Parameters[j])
-                                {
-                                    match = false;
-                                    break;
-                                }
+                                genericMethod = CheckGenericParams(ilMethod, param, ref match);
                             }
-                            if (match)
+                            else
                             {
-                                match = returnType == null || i.ReturnType == returnType;
-                            }
-                            if (match)
-                            {
-                                if (declaredOnly)
+                                match = CheckGenericArguments(ilMethod, genericArguments);
+                                if (!match)
+                                    continue;
+                                for (int j = 0; j < pCnt; j++)
                                 {
-                                    if (i.DeclearingType is ILType == false || ((ILType)i.DeclearingType).definition != definition)
+                                    if (param[j] != ilMethod.Parameters[j])
                                     {
                                         match = false;
+                                        break;
                                     }
                                 }
-                            }
+                                if (match)
+                                {
+                                    match = returnType == null || ilMethod.ReturnType == returnType;
+                                }
+                                if (match)
+                                {
+                                    if (declaredOnly)
+                                    {
+                                        if (ilMethod.DeclearingType is ILType == false || ((ILType)ilMethod.DeclearingType).definition != definition)
+                                        {
+                                            match = false;
+                                        }
+                                    }
+                                }
 
-                            if (match)
-                                return i;
+                                if (match)
+                                    return ilMethod;
+                            }
                         }
+                    }
+                    else
+                    {
+                        throw new Exception("Unhandled for CLRMethod");
+                        //TODO: 处理CLRMethod
                     }
                 }
             }

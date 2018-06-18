@@ -18,7 +18,7 @@ namespace ILRuntime.Reflection
         Type[] attributeTypes;
         ILRuntimeFieldInfo[] fields;
         ILRuntimePropertyInfo[] properties;
-        ILRuntimeMethodInfo[] methods;
+        MethodInfo[] methods;
 
         public ILType ILType { get { return type; } }
 
@@ -70,10 +70,17 @@ namespace ILRuntime.Reflection
         void InitializeMethods()
         {
             var methods = type.GetMethods();
-            this.methods = new ILRuntimeMethodInfo[methods.Count];
+            this.methods = new MethodInfo[methods.Count];
             for(int i = 0; i < methods.Count; i++)
             {
-                this.methods[i] = (ILRuntimeMethodInfo)((ILMethod)methods[i]).ReflectionMethodInfo;
+                if (methods[i] is ILMethod)
+                {
+                    this.methods[i] = (ILRuntimeMethodInfo)((ILMethod)methods[i]).ReflectionMethodInfo;
+                }
+                else
+                {
+                    this.methods[i] = ((CLRMethod) methods[i]).MethodInfo;
+                }
             }
         }
 
