@@ -13,7 +13,7 @@ namespace ILRuntime.CLR.TypeSystem
 {
     public class ILType : IType
     {
-        Dictionary<string, List<ILMethod>> methods;
+        Dictionary<string, List<IMethod>> methods;
         TypeReference typeRef;
         TypeDefinition definition;
         ILRuntime.Runtime.Enviorment.AppDomain appdomain;
@@ -192,7 +192,7 @@ namespace ILRuntime.CLR.TypeSystem
         {
             get
             {
-                return  typeRef.HasGenericParameters && genericArguments == null;
+                return typeRef.HasGenericParameters && genericArguments == null;
             }
         }
 
@@ -471,6 +471,21 @@ namespace ILRuntime.CLR.TypeSystem
                     res.Add(j);
             }
 
+            // 添加基类方法
+            //            if (this.BaseType != null)
+            //            {
+            //                res.AddRange(BaseType.GetMethods());
+            //            }
+            //            else
+            //            {
+            //                if (TypeForCLR.BaseType == typeof(object))
+            //                {
+            //                    res.AddRange(appdomain.ObjectType.GetMethods());
+            //                    //                    res.Add(appdomain.ObjectType.);
+            //                    //                    res.AddRange(((IType)TypeForCLR).GetMethods());
+            //                }
+            //            }
+
             return res;
         }
         void InitializeInterfaces()
@@ -602,7 +617,7 @@ namespace ILRuntime.CLR.TypeSystem
         {
             if (methods == null)
                 InitializeMethods();
-            List<ILMethod> lst;
+            List<IMethod> lst;
             if (methods.TryGetValue(name, out lst))
             {
                 return lst[0];
@@ -614,11 +629,19 @@ namespace ILRuntime.CLR.TypeSystem
         {
             if (methods == null)
                 InitializeMethods();
-            List<ILMethod> lst;
+            List<IMethod> lst;
             if (methods.TryGetValue(name, out lst))
             {
                 foreach (var i in lst)
                 {
+                    if (declaredOnly)
+                    {
+                        if (i.DeclearingType is ILType == false || ((ILType)i.DeclearingType).definition != definition)
+                        {
+                            continue;
+                        }
+                    }
+
                     if (i.ParameterCount == paramCount)
                         return i;
                 }
@@ -637,7 +660,7 @@ namespace ILRuntime.CLR.TypeSystem
 
         void InitializeMethods()
         {
-            methods = new Dictionary<string, List<ILMethod>>();
+            methods = new Dictionary<string, List<IMethod>>();
             constructors = new List<ILMethod>();
             foreach (var i in definition.Methods)
             {
@@ -650,14 +673,34 @@ namespace ILRuntime.CLR.TypeSystem
                 }
                 else
                 {
-                    List<ILMethod> lst;
+                    List<IMethod> lst;
                     if (!methods.TryGetValue(i.Name, out lst))
                     {
-                        lst = new List<ILMethod>();
+                        lst = new List<IMethod>();
                         methods[i.Name] = lst;
                     }
                     var m = new ILMethod(i, this, appdomain);
                     lst.Add(m);
+                }
+            }
+
+
+            if (BaseType != null)
+            {
+                var baseMethods = BaseType.GetMethods();
+                foreach (var baseMethod in baseMethods)
+                {
+                    List<IMethod> lstBase;
+                    if (!methods.TryGetValue(baseMethod.Name, out lstBase))
+                    {
+                        lstBase = new List<IMethod>();
+                        methods[baseMethod.Name] = lstBase;
+                    }
+
+                    if (baseMethod is ILMethod)
+                    {
+                        lstBase.Add((ILMethod)baseMethod);
+                    }
                 }
             }
 
@@ -707,41 +750,62 @@ namespace ILRuntime.CLR.TypeSystem
         {
             if (methods == null)
                 InitializeMethods();
-            List<ILMethod> lst;
+            List<IMethod> lst;
             IMethod genericMethod = null;
             if (methods.TryGetValue(name, out lst))
             {
                 for (var idx = 0; idx < lst.Count; idx++)
                 {
-                    var i = lst[idx];
-                    int pCnt = param != null ? param.Count : 0;
-                    if (i.ParameterCount == pCnt)
+                    if (lst[idx] is ILMethod)
                     {
-                        bool match = true;
-                        if (genericArguments != null && i.GenericParameterCount == genericArguments.Length && genericMethod == null)
+                        var i = lst[idx] as ILMethod;
+                        int pCnt = param != null ? param.Count : 0;
+                        if (i.ParameterCount == pCnt)
                         {
-                            genericMethod = CheckGenericParams(i, param, ref match);
-                        }
-                        else
-                        {
-                            match = CheckGenericArguments(i, genericArguments);
-                            if (!match)
-                                continue;
-                            for (int j = 0; j < pCnt; j++)
+                            bool match = true;
+                            if (genericArguments != null && i.GenericParameterCount == genericArguments.Length && genericMethod == null)
                             {
-                                if (param[j] != i.Parameters[j])
+                                genericMethod = CheckGenericParams(i, param, ref match);
+                            }
+                            else
+                            {
+                                match = CheckGenericArguments(i, genericArguments);
+                                if (!match)
+                                    continue;
+                                for (int j = 0; j < pCnt; j++)
                                 {
-                                    match = false;
-                                    break;
+                                    if (param[j] != i.Parameters[j])
+                                    {
+                                        match = false;
+                                        break;
+                                    }
+                                }
+                                if (match)
+                                {
+                                    match = returnType == null || i.ReturnType == returnType;
+                                }
+
+                                if (match)
+                                {
+                                    if (declaredOnly)
+                                    {
+                                        if (i.DeclearingType is ILType == false || ((ILType)i.DeclearingType).definition != definition)
+                                        {
+                                            match = false;
+                                        }
+                                    }
+                                }
+
+                                if (match)
+                                {
+                                    return i;
                                 }
                             }
-                            if (match)
-                            {
-                                match = returnType == null || i.ReturnType == returnType;
-                            }
-                            if (match)
-                                return i;
                         }
+                    }
+                    else
+                    {
+                        //TODO: 处理CLR方法
                     }
                 }
             }
@@ -807,7 +871,7 @@ namespace ILRuntime.CLR.TypeSystem
                         p2 = p2.ElementType;
                     if (p.HasGenericParameter)
                     {
-                        if(p.Name != p2.Name)
+                        if (p.Name != p2.Name)
                         {
                             match = false;
                             break;
