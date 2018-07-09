@@ -338,7 +338,7 @@ namespace ILRuntime.Runtime.Intepreter
                 PushParameter(ref ctx, pTypes[0], p1);
                 PushParameter(ref ctx, pTypes[1], p2);
                 PushParameter(ref ctx, pTypes[2], p3);
-                PushParameter(ref ctx, pTypes[3], p3);
+                PushParameter(ref ctx, pTypes[3], p4);
 
                 ctx.Invoke();
                 return ReadResult<TResult>(ref ctx, pTypes[4]);
@@ -761,6 +761,7 @@ namespace ILRuntime.Runtime.Intepreter
         Long,
         Float,
         Double,
+        Enum,
         Object,
     }
 
@@ -831,6 +832,14 @@ namespace ILRuntime.Runtime.Intepreter
                 else
                     throw new NotImplementedException(string.Format("Not supported type:{0}", type.FullName));
             }
+            else if (type.IsEnum)
+            {
+                if (PrimitiveConverter<T>.ToInteger != null && PrimitiveConverter<T>.FromInteger != null)
+                    return InvocationTypes.Integer;
+                if (PrimitiveConverter<T>.ToLong != null && PrimitiveConverter<T>.FromLong != null)
+                    return InvocationTypes.Long;
+                return InvocationTypes.Enum;
+            }
             else
                 return InvocationTypes.Object;
         }
@@ -850,6 +859,9 @@ namespace ILRuntime.Runtime.Intepreter
                     break;
                 case InvocationTypes.Double:
                     ctx.PushDouble(val);
+                    break;
+                case InvocationTypes.Enum:
+                    ctx.PushObject(val, false);
                     break;
                 default:
                     ctx.PushObject(val);
